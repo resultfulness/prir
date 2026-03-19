@@ -1,0 +1,4 @@
+#!/bin/sh
+
+mvn compile
+java -cp target/classes mm.Main -- "$@"
