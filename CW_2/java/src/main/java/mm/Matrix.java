@@ -8,7 +8,7 @@ import java.io.IOException;
 public class Matrix {
     public static Matrix fromFile(
         String filename
-    ) throws IOException, MatrixFromFileException {
+    ) throws IOException, FileNotFoundException, IllegalArgumentException {
         try {
             BufferedReader reader = new BufferedReader(
                 new FileReader(filename)
@@ -20,35 +20,69 @@ public class Matrix {
 
             String line;
             for (int i = 0; i < rows; i++) {
-                line = reader.readLine();
+                if ((line = reader.readLine()) == null) {
+                    reader.close();
+                    throw new IllegalArgumentException(
+                        "file '" + filename + "' has invalid format: " +
+                        "row count does not match"
+                    );
+                }
                 String[] snums = line.split("\s+");
+                if (snums.length != columns) {
+                    reader.close();
+                    throw new IllegalArgumentException(
+                        "file '" + filename + "' has invalid format: " +
+                        "column count does not match"
+                    );
+                }
                 for (int j = 0; j < columns; j++) {
                     // last num has dot at the end, remove
-                    if (i == rows - 1 && j == columns - 1) {
+                    if (
+                        i == rows - 1 &&
+                        j == columns - 1 &&
+                        snums[j].charAt(snums[j].length() - 1) == '.'
+                    ) {
                         snums[j] = snums[j].substring(0, snums[j].length() - 1);
                     }
                     matrix.values[i][j] = Double.parseDouble(snums[j]);
                 }
             }
 
+            if (reader.readLine() != null) {
+                reader.close();
+                throw new IllegalArgumentException(
+                    "file '" + filename + "' has invalid format: " +
+                    "row count does not match"
+                );
+            }
+
             reader.close();
             return matrix;
-        } catch (FileNotFoundException e) {
-            throw new MatrixFromFileException(
-                "file '" + filename + "' not found"
-            );
         } catch (NumberFormatException e) {
-            throw new MatrixFromFileException(
-                "file '" + filename + "' has invalid format"
+            throw new IllegalArgumentException(
+                "file '" + filename + "' has invalid format: " +
+                "could not parse number"
             );
         }
     }
-    public int rows;
-    public int columns;
 
-    public double[][] values;
+    private int rows;
+    private int columns;
 
-    public Matrix(int rows, int columns) {
+    private double[][] values;
+
+    public Matrix(int rows, int columns) throws IllegalArgumentException {
+        if (rows <= 0) {
+            throw new IllegalArgumentException(
+                "matrix row count invalid: must be greater than 0, got: " + rows
+            );
+        }
+        if (columns <= 0) {
+            throw new IllegalArgumentException(
+                "matrix column count invalid: must be greater than 0, got: " +
+                columns
+            );
+        }
         this.rows = rows;
         this.columns = columns;
         this.values = new double[rows][columns];
@@ -68,10 +102,20 @@ public class Matrix {
 
         return sb.toString();
     }
-}
 
-class MatrixFromFileException extends Exception {
-    public MatrixFromFileException(String s) {
-        super(s);
+    public int getRows() {
+        return this.rows;
+    }
+
+    public int getColumns() {
+        return this.columns;
+    }
+
+    public double getValueAt(int row, int column) {
+        return this.values[row][column];
+    }
+
+    public void setValueAt(int row, int column, double value) {
+        this.values[row][column] = value;
     }
 }

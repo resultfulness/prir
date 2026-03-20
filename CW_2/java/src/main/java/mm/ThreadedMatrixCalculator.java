@@ -10,16 +10,16 @@ public class ThreadedMatrixCalculator {
 
         public void run() {
             int tmp = this.index;
-            while (tmp < Out.rows * Out.columns) {
+            while (tmp < Out.getRows() * Out.getColumns()) {
                 double res = 0;
-                int r = tmp / Out.columns;
-                int c = tmp % Out.columns;
+                int r = tmp / Out.getColumns();
+                int c = tmp % Out.getColumns();
 
-                for (int i = 0; i < A.columns; i++) {
-                    res += A.values[r][i] * B.values[i][c];
+                for (int i = 0; i < A.getColumns(); i++) {
+                    res += A.getValueAt(r, i) * B.getValueAt(i, c);
                 }
 
-                Out.values[r][c] = res;
+                Out.setValueAt(r, c, res);
 
                 ThreadedMatrixCalculator.this.updateOutFrobeniusNorm(res);
 
@@ -39,20 +39,27 @@ public class ThreadedMatrixCalculator {
         Matrix A,
         Matrix B,
         int nThreads
-    ) throws MatrixCalculatorException {
-        if (A.columns != B.rows) {
-            throw new MatrixCalculatorException(
+    ) throws IllegalArgumentException {
+        int ar = A.getRows();
+        int ac = A.getColumns();
+        int br = B.getRows();
+        int bc = B.getColumns();
+        if (ac != br) {
+            throw new IllegalArgumentException(
                 String.format(
                     "can't multiply matrices: dimensions mismatch! " +
                     "got %dx%d * %dx%d; %d != %d",
-                    A.rows, A.columns, B.rows, B.columns, A.columns, B.rows
+                    ar, ac, br, bc, ac, br
                 )
             );
         }
 
         this.A = A;
         this.B = B;
-        this.Out = new Matrix(A.rows, B.columns);
+        try {
+            this.Out = new Matrix(ar, bc);
+        } catch (IllegalArgumentException e) { // cant fail, A and B valid
+        }
         this.OutFrobeniusNorm = 0;
 
         this.threads = new MultiplicationThread[nThreads];
@@ -83,11 +90,5 @@ public class ThreadedMatrixCalculator {
         System.out.println(Out);
         System.out.print("calculated frobenius norm: ");
         System.out.println(OutFrobeniusNorm);
-    }
-}
-
-class MatrixCalculatorException extends Exception {
-    public MatrixCalculatorException(String s) {
-        super(s);
     }
 }
