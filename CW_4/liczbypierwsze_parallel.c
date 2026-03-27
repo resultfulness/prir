@@ -3,34 +3,67 @@
 #include <math.h>
 #include <omp.h>
 
-#define N 10000000
-#define S (int)sqrt(N)
-#define M N/10
-
-int foo(const void *a, const void *b) {
+int cmp_int(const void *a, const void *b) {
     return (*(int*) a - *(int *)b);
 }
 
 int main(int argc, char **argv) {
-    long int tmp[S + 1]; /*tablica pomocnicza*/
-    long int pierwsze[M]; /*liczby pierwsze w przedziale 2..N*/
+    long int *tmp;
+    long int *pierwsze;
     long i, j, liczba;
-    long int liczba_podzielników; /* l. podzielnikow*/
+    long int liczba_podzielników;
     long int liczba_liczb_pierwszych = 0; /*l. liczb pierwszych w tablicy pierwsze*/
     double czas; /*zmienna do  mierzenia czasu*/
     FILE *fp;
+    int n_wątków, górny_limit_liczb;
+    int sqrt_górny_limit_liczb, max_liczba_liczb_pierwszych_w_przedziale;
+
+    if (argc < 3) {
+        printf("Użycie: %s <n wątków> <górny limit liczb>\n", argv[0]);
+        return 1;
+    }
+
+    if ((n_wątków = atoi(argv[1])) <= 0) {
+        printf("n wątków musi być liczbą > 0\n");
+        return 1;
+    }
+    omp_set_num_threads(n_wątków);
+
+    if ((górny_limit_liczb = atoi(argv[2])) <= 0) {
+        printf("górny limit liczb musi być liczbą > 0\n");
+        return 1;
+    }
+    sqrt_górny_limit_liczb = (int)sqrt(górny_limit_liczb);
+    max_liczba_liczb_pierwszych_w_przedziale = górny_limit_liczb / 10;
+
+    tmp = malloc(
+        sizeof(long int) * ((int)sqrt(górny_limit_liczb) + 1)
+    );
+    if (tmp == NULL) {
+        printf("błąd alokacji\n");
+        return 1;
+    };
+
+    pierwsze = malloc(
+        sizeof(long int) * max_liczba_liczb_pierwszych_w_przedziale
+    );
+    if (pierwsze == NULL) {
+        printf("błąd alokacji\n");
+        free(tmp);
+        return 1;
+    }
 
     /*wyznaczanie podzielnikow z przedzialow 2..S*/
-    for (i = 2; i <= S; i++) {
+    for (i = 2; i <= sqrt_górny_limit_liczb; i++) {
         tmp[i] = 1; /*inicjowanie*/
     }
 
-    for (i = 2; i <= S; i++) {
+    for (i = 2; i <= sqrt_górny_limit_liczb; i++) {
         if (tmp[i] == 1) {
             pierwsze[liczba_liczb_pierwszych++] = i; /*zapamietanie podzielnika*/
 
             /*wykreslanie liczb zlozonych bedacych wielokrotnosciami i*/
-            for (j = i + i; j <= S; j += i) {
+            for (j = i + i; j <= sqrt_górny_limit_liczb; j += i) {
                 tmp[j] = 0;
             }
         }
@@ -39,7 +72,11 @@ int main(int argc, char **argv) {
     liczba_podzielników = liczba_liczb_pierwszych; /*zapamietanie liczby podzielnikow*/
 
     #pragma omp parallel for private(i)
-    for (liczba = S + 1; liczba <= N; liczba++) {
+    for (
+        liczba = sqrt_górny_limit_liczb + 1;
+        liczba <= górny_limit_liczb;
+        liczba++
+    ) {
         for (i = 0; i < liczba_podzielników; i++) {
             if (liczba % pierwsze[i] == 0) { /* liczba zlozona */
                 break;
@@ -55,10 +92,12 @@ int main(int argc, char **argv) {
         }
     }
 
-    qsort(pierwsze, liczba_liczb_pierwszych, sizeof(long int), foo);
+    // qsort(pierwsze, liczba_liczb_pierwszych, sizeof(long int), cmp_int);
 
     if ((fp = fopen("primes.txt", "w")) == NULL) {
         printf("Nie moge otworzyc pliku do zapisu\n");
+        free(pierwsze);
+        free(tmp);
         exit(1);
     }
 
@@ -67,5 +106,7 @@ int main(int argc, char **argv) {
     }
 
     fclose(fp);
+    free(pierwsze);
+    free(tmp);
     return 0;
 }
