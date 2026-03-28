@@ -33,12 +33,13 @@ int main(int argc, char **argv) {
         printf("górny limit liczb musi być liczbą > 0\n");
         return 1;
     }
-    sqrt_górny_limit_liczb = (int)sqrt(górny_limit_liczb);
-    max_liczba_liczb_pierwszych_w_przedziale = górny_limit_liczb / 10;
 
-    tmp = malloc(
-        sizeof(long int) * ((int)sqrt(górny_limit_liczb) + 1)
-    );
+    sqrt_górny_limit_liczb = (int)sqrt(górny_limit_liczb);
+
+
+    max_liczba_liczb_pierwszych_w_przedziale = górny_limit_liczb > 100000 ? górny_limit_liczb / 10 : górny_limit_liczb;
+
+    tmp = malloc(sizeof(long int) * (sqrt_górny_limit_liczb + 1));
     if (tmp == NULL) {
         printf("błąd alokacji\n");
         return 1;
@@ -69,6 +70,8 @@ int main(int argc, char **argv) {
         }
     }
 
+    free(tmp);
+
     liczba_podzielników = liczba_liczb_pierwszych; /*zapamietanie liczby podzielnikow*/
 
     #pragma omp parallel for private(i)
@@ -97,7 +100,6 @@ int main(int argc, char **argv) {
     if ((fp = fopen("primes.txt", "w")) == NULL) {
         printf("Nie moge otworzyc pliku do zapisu\n");
         free(pierwsze);
-        free(tmp);
         exit(1);
     }
 
@@ -107,6 +109,5 @@ int main(int argc, char **argv) {
 
     fclose(fp);
     free(pierwsze);
-    free(tmp);
     return 0;
 }
