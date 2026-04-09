@@ -1,0 +1,3 @@
+#!/bin/sh
+
+/opt/mpich/bin/mpicc ./main.c -lm && /opt/mpich/bin/mpiexec -np 4 ./a.out "$@"
