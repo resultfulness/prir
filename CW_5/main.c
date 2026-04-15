@@ -22,8 +22,6 @@ double integrate(
     double chunk_size = (end - begin) / num_points;
     double total = 0;
 
-    // printf("%lf %lf %d %lf %lf\n", begin, end, num_points, chunk_size, total);
-
     for (double i = begin; i < end; i += chunk_size) {
         double j = i + chunk_size;
         total +=
@@ -41,22 +39,22 @@ double *split_work(
 ) {
     double *res = malloc(sizeof(double) * num_processes * 3);
 
-    int points_per = ceil(num_points / (double) num_processes);
-    int points_left = num_points;
-    double chunk_size = (end - begin) / num_points;
+    int min_points_per_process = num_points / num_processes;
+    int remainder = num_points % num_processes;
+
+    double chunk_size = (end - begin) / num_processes;
 
     for (int i = 0; i < num_processes; i++) {
-        res[i] = i * chunk_size;
-        res[i + 1] = (i + 1) * chunk_size;
-        if (i == num_processes - 1) {
-            res[i + 2] = points_left;
-        } else {
-            res[i + 2] = points_per;
-            points_left -= points_per;
+        res[i * 3] = i * chunk_size;
+        res[i * 3 + 1] = (i + 1) * chunk_size;
+        res[i * 3 + 2] = min_points_per_process;
+        if (remainder > 0) {
+            res[i * 3 + 2]++;
+            remainder--;
         }
-        printf("process %d got res[i+0] = %lf\n", i, res[i+0]);
-        printf("process %d got res[i+1] = %lf\n", i, res[i+1]);
-        printf("process %d got res[i+2] = %lf\n", i, res[i+2]);
+        // printf("process %d got res[3i+0] = %lf\n", i, res[3*i+0]);
+        // printf("process %d got res[3i+1] = %lf\n", i, res[3*i+1]);
+        // printf("process %d got res[3i+2] = %lf\n", i, res[3*i+2]);
     }
 
     return res;
@@ -79,7 +77,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    MPI_Init(NULL, NULL);
+    MPI_Init(&argc, &argv);
 
     int num_processes;
     MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
@@ -90,12 +88,13 @@ int main(int argc, char **argv) {
     double *params;
     if (world_rank == 0) {
         params = split_work(begin, end, num_points, num_processes);
-        for (int i = 0; i < num_processes; i++) {
-            printf("%lf %lf %lf\n", params[i * num_processes], params[i * num_processes + 1], params[i * num_processes + 2]);
-        }
     }
 
     double *sub_param = malloc(sizeof(double) * 3);
+    double *sub_sums;
+    if (world_rank == 0) {
+        sub_sums = malloc(sizeof(double) * num_processes);
+    }
 
     MPI_Scatter(
         params,
@@ -107,15 +106,13 @@ int main(int argc, char **argv) {
         0,
         MPI_COMM_WORLD
     );
-    // printf("scatter sent num_points %lf\n", sub_param[2]);
 
-    double sub_sum = integrate(my_sin, sub_param[0], sub_param[1], sub_param[2]);
-    // printf("got %lf\n", sub_sum);
-
-    double *sub_sums = NULL;
-    if (world_rank == 0) {
-        sub_sums = malloc(sizeof(double) * num_processes);
-    }
+    double sub_sum = integrate(
+        my_sin,
+        sub_param[0],
+        sub_param[1],
+        sub_param[2]
+    );
 
     MPI_Gather(
         &sub_sum,

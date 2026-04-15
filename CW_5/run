@@ -1,3 +1,13 @@
 #!/bin/sh
 
-/opt/mpich/bin/mpicc ./main.c -lm && /opt/mpich/bin/mpiexec -np 4 ./a.out "$@"
+if [ -x "$(command -v mpicc)" ]; then
+    MPICC=mpicc
+    MPIEXEC=mpiexec
+elif [ -f /opt/mpich/bin/mpicc ]; then
+    MPICC=/opt/mpich/bin/mpicc
+    MPIEXEC=/opt/mpich/bin/mpiexec
+else
+    exit
+fi
+
+"$MPICC" ./main.c -lm && "$MPIEXEC" -np 4 ./a.out "$@"
