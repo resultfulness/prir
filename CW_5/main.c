@@ -7,6 +7,10 @@ double my_sin(double x) {
     return sin(x);
 }
 
+double my_griewank(double x) {
+    return 1 - cos(x) + x * x / 4000;
+}
+
 double simpson_rule(double (*func)(double), double begin, double end) {
     return (end - begin) / 6 * (
         func(begin) +
@@ -118,11 +122,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    double *sub_param = malloc(sizeof(double) * 3);
-    if (sub_param == NULL) {
-        fprintf(stderr, "malloc error\n");
-        goto out_free;
-    }
+    double sub_param[3];
 
     MPI_Scatter(
         params, 3, MPI_DOUBLE,
@@ -159,7 +159,6 @@ out_free:
         if (params) free(params);
         if (sub_sums) free(sub_sums);
     }
-    if (sub_param) free(sub_param);
 
     MPI_Finalize();
 
