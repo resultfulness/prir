@@ -6,18 +6,21 @@
 #define N 10000000
 
 __global__ void vector_add(float *out, float *a, float *b, int n) {
-    int posinblock = threadIdx.x;
-    int ninblock = blockDim.x;
+    int thread_i = blockDim.x * blockIdx.x + threadIdx.x;
+    int n_threads = gridDim.x * blockDim.x;
+    int per_thread = N / n_threads;
+    int thread_chunk_start = thread_i * per_thread;
 
-    int posofblock = blockIdx.x;
-    int nblocks = gridDim.x;
-
-    int per_block = N / nblocks;
-
-    for (int i = posinblock + per_block * posofblock;
-         i < (posofblock+1) * per_block; 
-         i += ninblock) {
+    for (int i = thread_chunk_start; i < thread_chunk_start + per_thread; i++) {
         out[i] = a[i] + b[i];
+    }
+
+    int remainder = N % n_threads;
+
+    if (thread_i < remainder) {
+        int extra_chunk_start = per_thread * n_threads;
+        int extra_chunk_i = extra_chunk_start + thread_i;
+        out[extra_chunk_i] = a[extra_chunk_i] + b[extra_chunk_i];
     }
 }
 
