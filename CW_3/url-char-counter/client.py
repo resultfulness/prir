@@ -23,11 +23,23 @@ def client(url_file_path):
         for line in lines:
             input_queue.put(line)
 
-    result = []
+    url_counts = []
     for _ in range(len(lines)):
-        result.append(output_queue.get())
+        url_counts.append(output_queue.get())
 
-    print(result)
+    for i, url_count in enumerate(url_counts):
+        print(lines[i] + ":", sep="")
+        print(url_count)
+
+    total = {}
+    for url_count in url_counts:
+        for char, count in url_count.items():
+            if char not in total:
+                total[char] = 0
+            total[char] += count
+
+    print("total:")
+    print(total)
 
 
 if __name__ == "__main__":
