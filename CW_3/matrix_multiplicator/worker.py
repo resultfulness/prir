@@ -11,12 +11,15 @@ def main():
     input_queue: Queue = m.input()
     output_queue: Queue = m.output()
 
-    i = 0
     while True:
-        row, vector = input_queue.get()
-        print("New row :D", i)
-        i += 1
-        output_queue.put(sum([r * v[0] for r, v in zip(row, vector)]))
+        try:
+            batch_index, rows, vector = input_queue.get()
+        except KeyboardInterrupt:
+            print("Worker terminated")
+            break
+        print("Processing batch", batch_index)
+        result = [sum(r * v for r, v in zip(row, vector)) for row in rows]
+        output_queue.put((batch_index, result))
 
 
 if __name__ == "__main__":
